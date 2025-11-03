@@ -2,15 +2,15 @@ import "@std/dotenv/load";
 
 import { App } from "@slack/bolt";
 import type { BlockAction, ButtonAction } from "@slack/bolt";
-import { loadConfig } from "./config.ts";
+import { loadConfig } from "./src/config.ts";
 import {
   createApplicationMessage,
   createApplicationModal,
   markAsApproved,
   updateVoteCount,
-} from "./views.ts";
-import { isUserInChannel } from "./utils.ts";
-import { migrateToLatest } from "./pg.ts";
+} from "./src/views.ts";
+import { isUserInChannel } from "./src/utils.ts";
+import { migrateToLatest } from "./src/db.ts";
 import {
   approveApplication,
   createApplication,
@@ -18,7 +18,7 @@ import {
   getVoteCount,
   getVotesForApplication,
   upsertVote,
-} from "./repo.ts";
+} from "./src/repo.ts";
 
 const {
   TOKEN,

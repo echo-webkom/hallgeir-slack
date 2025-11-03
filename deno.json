@@ -2,8 +2,8 @@
   "tasks": {
     "dev": "deno run -A --watch main.ts",
     "start": "deno run -A main.ts",
-    "db:generate": "deno run -A npm:kysely-codegen --out-file=types.ts",
-    "db:migrate": "deno run -A migrate.ts"
+    "db:generate": "deno run -A npm:kysely-codegen --out-file=src/types.ts",
+    "db:migrate": "deno run -A bin/migrate.ts"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",

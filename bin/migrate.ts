@@ -1,5 +1,5 @@
 import "@std/dotenv/load";
-import { migrateToLatest } from "./pg.ts";
+import { migrateToLatest } from "../src/db.ts";
 
 console.log("Running migrations...");
 await migrateToLatest();
