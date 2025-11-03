@@ -19,7 +19,7 @@ const groups = [
 type ViewsOpenArguments = App["client"]["views"]["open"]["arguments"];
 
 export function createApplicationModal(
-  command: SlashCommand,
+  command: SlashCommand
 ): ViewsOpenArguments {
   return {
     trigger_id: command.trigger_id,
@@ -211,6 +211,8 @@ export function updateVoteCount(
   blocks: Array<Block>,
   yesCount: number,
   noCount: number,
+  yesVoters: string[],
+  noVoters: string[]
 ): Array<Block> {
   const updatedBlocks = [...blocks];
   updatedBlocks[4] = {
@@ -220,6 +222,34 @@ export function updateVoteCount(
       text: `*Stemmer:* Ja: ${yesCount} | Nei: ${noCount}`,
     },
   };
+
+  // Remove old voter list if it exists
+  if (updatedBlocks.length > 6) {
+    updatedBlocks.splice(6, 1);
+  }
+
+  // Add voter list in context block (smaller text) after the buttons
+  const contextElements = [];
+  if (yesVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
+    });
+  }
+  if (noVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
+    });
+  }
+
+  if (contextElements.length > 0) {
+    updatedBlocks.push({
+      type: "context",
+      elements: contextElements,
+    });
+  }
+
   return updatedBlocks;
 }
 
@@ -227,6 +257,8 @@ export function markAsApproved(
   blocks: Array<Block>,
   yesCount: number,
   noCount: number,
+  yesVoters: Array<string>,
+  noVoters: Array<string>
 ): Array<Block> {
   const updatedBlocks = blocks.slice(0, -1);
 
@@ -237,6 +269,28 @@ export function markAsApproved(
       text: `*Stemmer:* Ja: ${yesCount} | Nei: ${noCount}`,
     },
   };
+
+  // Add voter list in context block (smaller text)
+  const contextElements = [];
+  if (yesVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
+    });
+  }
+  if (noVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
+    });
+  }
+
+  if (contextElements.length > 0) {
+    updatedBlocks.push({
+      type: "context",
+      elements: contextElements,
+    });
+  }
 
   updatedBlocks.push({
     type: "section",

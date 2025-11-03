@@ -16,6 +16,7 @@ import {
   createApplication,
   getApplication,
   getVoteCount,
+  getVotesForApplication,
   upsertVote,
 } from "./repo.ts";
 
@@ -206,6 +207,9 @@ async function handleVote(
     });
 
     const { yes_count, no_count } = await getVoteCount(applicationId);
+    const votes = await getVotesForApplication(applicationId);
+    const yesVoters = votes.filter((v) => v.is_yes).map((v) => v.user_id);
+    const noVoters = votes.filter((v) => !v.is_yes).map((v) => v.user_id);
     const originalMessage = body.message;
 
     // Check if application reaches 8+ yes votes
@@ -235,7 +239,9 @@ async function handleVote(
       const approvedBlocks = markAsApproved(
         originalMessage?.blocks,
         yes_count,
-        no_count
+        no_count,
+        yesVoters,
+        noVoters
       );
 
       console.log("Marking message as approved:", messageTs);
@@ -249,7 +255,9 @@ async function handleVote(
       const updatedBlocks = updateVoteCount(
         originalMessage?.blocks,
         yes_count,
-        no_count
+        no_count,
+        yesVoters,
+        noVoters
       );
 
       console.log("Updating vote counts in message:", messageTs);
