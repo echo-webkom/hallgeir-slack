@@ -63,6 +63,13 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
     return;
   }
 
+  console.log("Creating application:", {
+    what,
+    group_name: groupName,
+    amount,
+    description,
+    applicant_id: applicantId,
+  });
   try {
     const application = await createApplication({
       what,
@@ -81,17 +88,26 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       applicationId: application.id,
     });
 
+    console.log("Posting application to channel:", ECHONOMI_CHANNEL_ID);
     await client.chat.postMessage({
       channel: ECHONOMI_CHANNEL_ID,
       ...message,
     });
 
+    console.log("Posting ephemeral message to user:", body.user.id);
     await client.chat.postEphemeral({
       channel: body.user.id,
       user: body.user.id,
       text: `Din søknad for "${what}" er sendt til styret for godkjenning! 🎉`,
     });
   } catch (error) {
+    console.error("Creating application failed:", {
+      what,
+      group_name: groupName,
+      amount,
+      description,
+      applicant_id: applicantId,
+    });
     console.error("Error posting application:", error);
   }
 });
@@ -111,6 +127,7 @@ app.action<BlockAction<ButtonAction>>(
       const channelId = body.channel?.id;
       if (!channelId) return;
 
+      console.log("User is not a board member:", body.user.id);
       await client.chat.postEphemeral({
         channel: channelId,
         user: body.user.id,
@@ -137,6 +154,7 @@ app.action<BlockAction<ButtonAction>>(
       const channelId = body.channel?.id;
       if (!channelId) return;
 
+      console.log("User is not a board member:", body.user.id);
       await client.chat.postEphemeral({
         channel: channelId,
         user: body.user.id,
@@ -178,6 +196,9 @@ async function handleVote(
       return;
     }
 
+    console.log(
+      `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`
+    );
     await upsertVote({
       user_id: voterId,
       application_id: applicationId,
@@ -192,13 +213,16 @@ async function handleVote(
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {
+      console.log("Approving application:", applicationId);
       await approveApplication(applicationId);
 
+      console.log("Notifying applicant:", application.applicant_id);
       await client.chat.postMessage({
         channel: application.applicant_id,
         text: `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
       });
 
+      console.log("Notifying channel:", channelId);
       await client.chat.postMessage({
         channel: channelId,
         thread_ts: messageTs,
@@ -214,6 +238,7 @@ async function handleVote(
         no_count
       );
 
+      console.log("Marking message as approved:", messageTs);
       await client.chat.update({
         channel: channelId,
         ts: messageTs,
@@ -227,6 +252,7 @@ async function handleVote(
         no_count
       );
 
+      console.log("Updating vote counts in message:", messageTs);
       await client.chat.update({
         channel: channelId,
         ts: messageTs,
