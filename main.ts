@@ -54,8 +54,8 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
   const what = values.what.what_input.value;
   const groupName = values.group_name.group_name_input.selected_option?.value;
   const amount = values.amount.amount_input.value;
-  const description = values.description.description_input.value ??
-    "Ingen beskrivelse";
+  const description =
+    values.description.description_input.value ?? "Ingen beskrivelse";
   const applicantId = body.user.id;
 
   if (!what || !groupName || !amount || !description) {
@@ -105,7 +105,7 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID,
+      BOARD_CHANNEL_ID
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
@@ -120,7 +120,7 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "yes", client);
-  },
+  }
 );
 
 app.action<BlockAction<ButtonAction>>(
@@ -131,7 +131,7 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID,
+      BOARD_CHANNEL_ID
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
@@ -146,14 +146,14 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "no", client);
-  },
+  }
 );
 
 async function handleVote(
   body: BlockAction<ButtonAction>,
   action: ButtonAction,
   vote: "yes" | "no",
-  client: App["client"],
+  client: App["client"]
 ) {
   const messageTs = body.message?.ts;
   const channelId = body.channel?.id;
@@ -196,15 +196,13 @@ async function handleVote(
 
       await client.chat.postMessage({
         channel: application.applicant_id,
-        text:
-          `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
+        text: `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
       });
 
       await client.chat.postMessage({
         channel: channelId,
         thread_ts: messageTs,
-        text:
-          `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
+        text: `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
       });
     }
 
@@ -213,7 +211,7 @@ async function handleVote(
       const approvedBlocks = markAsApproved(
         originalMessage?.blocks,
         yes_count,
-        no_count,
+        no_count
       );
 
       await client.chat.update({
@@ -226,7 +224,7 @@ async function handleVote(
       const updatedBlocks = updateVoteCount(
         originalMessage?.blocks,
         yes_count,
-        no_count,
+        no_count
       );
 
       await client.chat.update({
