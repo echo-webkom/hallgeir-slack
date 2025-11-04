@@ -214,7 +214,9 @@ export function updateVoteCount(
   yesVoters: string[],
   noVoters: string[]
 ): Array<Block> {
-  const updatedBlocks = [...blocks];
+  // Keep core blocks and remove duplicates (fixes broken messages)
+  const updatedBlocks = blocks.slice(0, 6);
+
   updatedBlocks[4] = {
     type: "section",
     text: {
@@ -223,12 +225,6 @@ export function updateVoteCount(
     },
   };
 
-  // Remove old voter list if it exists
-  if (updatedBlocks.length > 6) {
-    updatedBlocks.splice(6, 1);
-  }
-
-  // Add voter list in context block (smaller text) after the buttons
   const contextElements = [];
   if (yesVoters.length > 0) {
     contextElements.push({
@@ -260,7 +256,18 @@ export function markAsApproved(
   yesVoters: Array<string>,
   noVoters: Array<string>
 ): Array<Block> {
-  const updatedBlocks = blocks.slice(0, -1);
+  const hasExistingVoterList = blocks.some((block) => block.type === "context");
+  const hasExistingApprovalMessage = blocks.some(
+    (block) =>
+      block.type === "section" && block.text?.text?.includes("*Godkjent!*")
+  );
+
+  // Preserve existing voter list and approval message if they exist
+  let coreBlocksEnd = 6;
+  if (hasExistingVoterList) coreBlocksEnd++;
+  if (hasExistingApprovalMessage) coreBlocksEnd++;
+
+  const updatedBlocks = blocks.slice(0, coreBlocksEnd);
 
   updatedBlocks[4] = {
     type: "section",
@@ -270,35 +277,39 @@ export function markAsApproved(
     },
   };
 
-  // Add voter list in context block (smaller text)
-  const contextElements = [];
-  if (yesVoters.length > 0) {
-    contextElements.push({
-      type: "mrkdwn",
-      text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
-    });
-  }
-  if (noVoters.length > 0) {
-    contextElements.push({
-      type: "mrkdwn",
-      text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
-    });
+  // Preserve existing voter list to avoid re-notifying users
+  if (!hasExistingVoterList) {
+    const contextElements = [];
+    if (yesVoters.length > 0) {
+      contextElements.push({
+        type: "mrkdwn",
+        text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
+      });
+    }
+    if (noVoters.length > 0) {
+      contextElements.push({
+        type: "mrkdwn",
+        text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
+      });
+    }
+
+    if (contextElements.length > 0) {
+      updatedBlocks.push({
+        type: "context",
+        elements: contextElements,
+      });
+    }
   }
 
-  if (contextElements.length > 0) {
+  if (!hasExistingApprovalMessage) {
     updatedBlocks.push({
-      type: "context",
-      elements: contextElements,
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "✅ *Godkjent!* Søknaden har blitt godkjent av styret.",
+      },
     });
   }
-
-  updatedBlocks.push({
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: "✅ *Godkjent!* Søknaden har blitt godkjent av styret.",
-    },
-  });
 
   return updatedBlocks as Array<Block>;
 }

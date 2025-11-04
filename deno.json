@@ -2,6 +2,7 @@
   "tasks": {
     "dev": "deno run -A --watch main.ts",
     "start": "deno run -A main.ts",
+    "test": "deno test --allow-all",
     "db:generate": "deno run -A npm:kysely-codegen --out-file=src/types.ts",
     "db:migrate": "deno run -A bin/migrate.ts"
   },

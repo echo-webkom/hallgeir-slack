@@ -15,10 +15,12 @@ import {
   approveApplication,
   createApplication,
   getApplication,
+} from "./src/repo/application.ts";
+import {
   getVoteCount,
   getVotesForApplication,
   upsertVote,
-} from "./src/repo.ts";
+} from "./src/repo/vote.ts";
 
 const {
   TOKEN,
