@@ -19,7 +19,7 @@ const groups = [
 type ViewsOpenArguments = App["client"]["views"]["open"]["arguments"];
 
 export function createApplicationModal(
-  command: SlashCommand
+  command: SlashCommand,
 ): ViewsOpenArguments {
   return {
     trigger_id: command.trigger_id,
@@ -212,7 +212,7 @@ export function updateVoteCount(
   yesCount: number,
   noCount: number,
   yesVoters: string[],
-  noVoters: string[]
+  noVoters: string[],
 ): Array<Block> {
   // Keep core blocks and remove duplicates (fixes broken messages)
   const updatedBlocks = blocks.slice(0, 6);
@@ -254,7 +254,7 @@ export function markAsApproved(
   yesCount: number,
   noCount: number,
   yesVoters: Array<string>,
-  noVoters: Array<string>
+  noVoters: Array<string>,
 ): Array<Block> {
   // Keep only core blocks and remove old voter lists/approval messages
   const updatedBlocks = blocks.slice(0, 6);

@@ -12,6 +12,7 @@ export function loadConfig() {
   const APP_TOKEN = Deno.env.get("SLACK_APP_TOKEN");
   const BOARD_CHANNEL_ID = Deno.env.get("BOARD_CHANNEL_ID");
   const ECHONOMI_CHANNEL_ID = Deno.env.get("ECHONOMI_CHANNEL_ID");
+  const DATABASE_URL = Deno.env.get("DATABASE_URL");
 
   console.log("Loading Hallgeir config...");
   console.log(
@@ -33,16 +34,22 @@ export function loadConfig() {
     "Using echonomi channel ID: ",
     ECHONOMI_CHANNEL_ID ? ECHONOMI_CHANNEL_ID : "not set",
   );
+  console.log(
+    `Using database URL: ${
+      DATABASE_URL ? "****" + DATABASE_URL.slice(-4) : "not set"
+    }`,
+  );
 
   if (
     !TOKEN ||
     !SIGNING_SECRET ||
     !APP_TOKEN ||
     !BOARD_CHANNEL_ID ||
-    !ECHONOMI_CHANNEL_ID
+    !ECHONOMI_CHANNEL_ID ||
+    !DATABASE_URL
   ) {
     console.error(
-      "Error: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID and ECHONOMI_CHANNEL_ID must be set.",
+      "Error: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID, ECHONOMI_CHANNEL_ID and DATABASE_URL must be set.",
     );
     Deno.exit(1);
   }

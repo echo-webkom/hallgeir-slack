@@ -10,17 +10,11 @@ import {
 } from "./src/views.ts";
 import { isUserInChannel } from "./src/utils.ts";
 import { migrateToLatest } from "./src/db.ts";
-import {
-  approveApplication,
-  createApplication,
-  getApplication,
-} from "./src/repo/application.ts";
-import {
-  getVoteCount,
-  getVotesForApplication,
-  upsertVote,
-} from "./src/repo/vote.ts";
+import { Application } from "./src/repo/application.ts";
+import { Vote } from "./src/repo/vote.ts";
 import { loadConfig } from "./src/config.ts";
+
+const APPROVE_THRESHOLD = 8;
 
 const {
   TOKEN,
@@ -74,7 +68,7 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
     applicant_id: applicantId,
   });
   try {
-    const application = await createApplication({
+    const application = await Application.create({
       what,
       group_name: groupName,
       amount,
@@ -179,21 +173,20 @@ async function handleVote(
   const messageTs = body.message?.ts;
   const channelId = body.channel?.id;
   const voterId = body.user.id;
-  const applicationId = parseInt(action.value || "0");
+  const applicationId = parseInt(action.value || "NaN");
 
   if (!messageTs || !channelId) {
     console.error("Missing message TS or channel ID");
     return;
   }
 
-  if (!applicationId) {
+  if (!isNaN(applicationId)) {
     console.error("Missing application ID");
     return;
   }
 
   try {
-    // Get the application from DB
-    const application = await getApplication(applicationId);
+    const application = await Application.findById(applicationId);
     if (!application) {
       console.error("Application not found:", applicationId);
       return;
@@ -202,25 +195,22 @@ async function handleVote(
     console.log(
       `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`,
     );
-    await upsertVote({
-      user_id: voterId,
-      application_id: applicationId,
-      is_yes: vote === "yes",
-    });
+    await Vote.update(voterId, applicationId, vote === "yes");
 
-    const { yes_count, no_count } = await getVoteCount(applicationId);
-    const votes = await getVotesForApplication(applicationId);
+    const { yes_count, no_count } = await Vote.count(applicationId);
+    const votes = await Vote.findManyByApplicationId(applicationId);
     const yesVoters = votes.filter((v) => v.is_yes).map((v) => v.user_id);
     const noVoters = votes.filter((v) => !v.is_yes).map((v) => v.user_id);
     const originalMessage = body.message;
 
     // Check if application reaches 8+ yes votes
-    const shouldApprove = yes_count >= 8 && !application.approved_at;
+    const shouldApprove = yes_count >= APPROVE_THRESHOLD &&
+      !application.approved_at;
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {
       console.log("Approving application:", applicationId);
-      await approveApplication(applicationId);
+      await Application.approve(applicationId);
 
       console.log("Notifying applicant:", application.applicant_id);
       await client.chat.postMessage({
