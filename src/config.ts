@@ -15,23 +15,23 @@ export function loadConfig() {
 
   console.log("Loading Hallgeir config...");
   console.log(
-    `Using bot token: ${TOKEN ? "****" + TOKEN.slice(-4) : "not set"}`
+    `Using bot token: ${TOKEN ? "****" + TOKEN.slice(-4) : "not set"}`,
   );
   console.log(
     `Using signing secret: ${
       SIGNING_SECRET ? "****" + SIGNING_SECRET.slice(-4) : "not set"
-    }`
+    }`,
   );
   console.log(
-    `Using app token: ${APP_TOKEN ? "****" + APP_TOKEN.slice(-4) : "not set"}`
+    `Using app token: ${APP_TOKEN ? "****" + APP_TOKEN.slice(-4) : "not set"}`,
   );
   console.log(
     "Using board channel ID: ",
-    BOARD_CHANNEL_ID ? BOARD_CHANNEL_ID : "not set"
+    BOARD_CHANNEL_ID ? BOARD_CHANNEL_ID : "not set",
   );
   console.log(
     "Using echonomi channel ID: ",
-    ECHONOMI_CHANNEL_ID ? ECHONOMI_CHANNEL_ID : "not set"
+    ECHONOMI_CHANNEL_ID ? ECHONOMI_CHANNEL_ID : "not set",
   );
 
   if (
@@ -42,7 +42,7 @@ export function loadConfig() {
     !ECHONOMI_CHANNEL_ID
   ) {
     console.error(
-      "Error: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID and ECHONOMI_CHANNEL_ID must be set."
+      "Error: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID and ECHONOMI_CHANNEL_ID must be set.",
     );
     Deno.exit(1);
   }

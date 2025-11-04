@@ -256,18 +256,8 @@ export function markAsApproved(
   yesVoters: Array<string>,
   noVoters: Array<string>
 ): Array<Block> {
-  const hasExistingVoterList = blocks.some((block) => block.type === "context");
-  const hasExistingApprovalMessage = blocks.some(
-    (block) =>
-      block.type === "section" && block.text?.text?.includes("*Godkjent!*")
-  );
-
-  // Preserve existing voter list and approval message if they exist
-  let coreBlocksEnd = 6;
-  if (hasExistingVoterList) coreBlocksEnd++;
-  if (hasExistingApprovalMessage) coreBlocksEnd++;
-
-  const updatedBlocks = blocks.slice(0, coreBlocksEnd);
+  // Keep only core blocks and remove old voter lists/approval messages
+  const updatedBlocks = blocks.slice(0, 6);
 
   updatedBlocks[4] = {
     type: "section",
@@ -277,39 +267,36 @@ export function markAsApproved(
     },
   };
 
-  // Preserve existing voter list to avoid re-notifying users
-  if (!hasExistingVoterList) {
-    const contextElements = [];
-    if (yesVoters.length > 0) {
-      contextElements.push({
-        type: "mrkdwn",
-        text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
-      });
-    }
-    if (noVoters.length > 0) {
-      contextElements.push({
-        type: "mrkdwn",
-        text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
-      });
-    }
-
-    if (contextElements.length > 0) {
-      updatedBlocks.push({
-        type: "context",
-        elements: contextElements,
-      });
-    }
-  }
-
-  if (!hasExistingApprovalMessage) {
-    updatedBlocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "✅ *Godkjent!* Søknaden har blitt godkjent av styret.",
-      },
+  // Always recreate voter list with current data
+  const contextElements = [];
+  if (yesVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `✅ ${yesVoters.map((id) => `<@${id}>`).join(", ")}`,
     });
   }
+  if (noVoters.length > 0) {
+    contextElements.push({
+      type: "mrkdwn",
+      text: `❌ ${noVoters.map((id) => `<@${id}>`).join(", ")}`,
+    });
+  }
+
+  if (contextElements.length > 0) {
+    updatedBlocks.push({
+      type: "context",
+      elements: contextElements,
+    });
+  }
+
+  // Always add approval message (either new or to replace the one we removed)
+  updatedBlocks.push({
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: "✅ *Godkjent!* Søknaden har blitt godkjent av styret.",
+    },
+  });
 
   return updatedBlocks as Array<Block>;
 }

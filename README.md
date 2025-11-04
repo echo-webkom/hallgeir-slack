@@ -1,18 +1,19 @@
 # Hallgeir
 
-Slack-bot for å hjelpe med økonomi-søknader til Hovedstyret i echo - Linjeforeningen for Informatikk ved UiB.
+Slack-bot for å hjelpe med økonomi-søknader til Hovedstyret i echo -
+Linjeforeningen for Informatikk ved UiB.
 
-## How to run
+## Hvordan kjøre
 
-To run the application you need Deno and Docker installed.
+For å kjøre applikasjonen trenger du Deno og Docker installert.
 
-1. Start the postgres database:
+1. Start postgres-databasen:
 
    ```sh
    docker-compose up -d
    ```
 
-2. Run the bot:
+2. Kjør boten:
 
    ```sh
    deno task dev
@@ -20,11 +21,12 @@ To run the application you need Deno and Docker installed.
 
 ## Deployment
 
-I currently deploy the application on a Railway instance. To deploy, push to the `main` branch and Railway will automatically build and deploy the application.
+Vi deployer for tiden applikasjonen på en Railway-instans. For å deployere, push
+til `main`-grenen, og Railway vil automatisk bygge og deployere applikasjonen.
 
-## Other
+## Annet
 
-You can also run the database migrations without starting the bot:
+Du kan også kjøre database-migreringene uten å starte boten:
 
 ```sh
 deno task db:migrate

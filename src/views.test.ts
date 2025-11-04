@@ -1,10 +1,10 @@
 import { assertEquals, assertExists } from "@std/assert";
 import {
-  createApplicationModal,
-  createApplicationMessage,
-  updateVoteCount,
-  markAsApproved,
   type ApplicationData,
+  createApplicationMessage,
+  createApplicationModal,
+  markAsApproved,
+  updateVoteCount,
 } from "./views.ts";
 
 Deno.test("createApplicationModal - creates valid modal structure", () => {
@@ -143,7 +143,7 @@ Deno.test(
     assertEquals(headerBlock.type, "header");
     assertEquals(headerBlock.text.type, "plain_text");
     assertEquals(headerBlock.text.text, "🎫 Søknad: Workshop");
-  }
+  },
 );
 
 Deno.test(
@@ -167,7 +167,7 @@ Deno.test(
     assertEquals(fields[0].text, "*Søker:*\n<@U456>");
     assertEquals(fields[1].text, "*Gruppe:*\nHyggkom");
     assertEquals(fields[2].text, "*Beløp:*\n3500 kr");
-  }
+  },
 );
 
 Deno.test("createApplicationMessage - contains description section", () => {
@@ -187,7 +187,7 @@ Deno.test("createApplicationMessage - contains description section", () => {
   assertEquals(descriptionBlock.text.type, "mrkdwn");
   assertEquals(
     descriptionBlock.text.text,
-    "*Beskrivelse:*\nThis is a test description"
+    "*Beskrivelse:*\nThis is a test description",
   );
 });
 
@@ -258,7 +258,7 @@ Deno.test("updateVoteCount - updates vote count correctly", () => {
     3,
     1,
     ["U001", "U002", "U003"],
-    ["U004"]
+    ["U004"],
   );
 
   const voteBlock = updatedBlocks[4];
@@ -281,7 +281,7 @@ Deno.test("updateVoteCount - adds voter list when voters exist", () => {
     2,
     1,
     ["U001", "U002"],
-    ["U003"]
+    ["U003"],
   );
 
   assertEquals(updatedBlocks.length, 7, "Should have 7 blocks with voter list");
@@ -310,7 +310,7 @@ Deno.test("updateVoteCount - handles only yes voters", () => {
     2,
     0,
     ["U001", "U002"],
-    []
+    [],
   );
 
   const contextBlock = updatedBlocks[6];
@@ -335,7 +335,7 @@ Deno.test("updateVoteCount - handles only no voters", () => {
     0,
     2,
     [],
-    ["U001", "U002"]
+    ["U001", "U002"],
   );
 
   const contextBlock = updatedBlocks[6];
@@ -360,7 +360,7 @@ Deno.test("updateVoteCount - handles zero votes", () => {
   assertEquals(
     updatedBlocks.length,
     6,
-    "Should have 6 blocks when no voters (no context block)"
+    "Should have 6 blocks when no voters (no context block)",
   );
   const voteBlock = updatedBlocks[4];
   assertEquals(voteBlock.text.text, "*Stemmer:* Ja: 0 | Nei: 0");
@@ -384,7 +384,7 @@ Deno.test("updateVoteCount - removes old voter list when updating", () => {
     1,
     0,
     ["U001"],
-    []
+    [],
   );
   assertEquals(updatedBlocks.length, 7);
 
@@ -394,7 +394,7 @@ Deno.test("updateVoteCount - removes old voter list when updating", () => {
     2,
     1,
     ["U002", "U003"],
-    ["U004"]
+    ["U004"],
   );
   assertEquals(updatedBlocks.length, 7, "Should still have 7 blocks");
 
@@ -420,17 +420,17 @@ Deno.test("markAsApproved - keeps voting buttons for re-approval", () => {
     4,
     1,
     ["U001", "U002", "U003", "U004"],
-    ["U005"]
+    ["U005"],
   );
 
   // Should still have the actions block (for fixing broken messages)
   const hasActionsBlock = approvedBlocks.some(
-    (block) => block.type === "actions"
+    (block) => block.type === "actions",
   );
   assertEquals(
     hasActionsBlock,
     true,
-    "Should keep actions block for re-approval"
+    "Should keep actions block for re-approval",
   );
 });
 
@@ -450,7 +450,7 @@ Deno.test("markAsApproved - updates vote count", () => {
     5,
     2,
     ["U001", "U002", "U003", "U004", "U005"],
-    ["U006", "U007"]
+    ["U006", "U007"],
   );
 
   const voteBlock = approvedBlocks[4];
@@ -473,7 +473,7 @@ Deno.test("markAsApproved - adds voter list when not already present", () => {
     3,
     1,
     ["U001", "U002", "U003"],
-    ["U004"]
+    ["U004"],
   );
 
   const contextBlock = approvedBlocks.find((block) => block.type === "context");
@@ -485,55 +485,47 @@ Deno.test("markAsApproved - adds voter list when not already present", () => {
   assertEquals(elements[1].text, "❌ <@U004>");
 });
 
-Deno.test(
-  "markAsApproved - preserves existing voter list to avoid spam",
-  () => {
-    const applicationData: ApplicationData = {
-      what: "Test",
-      groupName: "Webkom",
-      amount: "100",
-      description: "Test",
-      applicantId: "U999",
-      applicationId: 5,
-    };
+Deno.test("markAsApproved - updates voter list with current data", () => {
+  const applicationData: ApplicationData = {
+    what: "Test",
+    groupName: "Webkom",
+    amount: "100",
+    description: "Test",
+    applicantId: "U999",
+    applicationId: 5,
+  };
 
-    const originalMessage = createApplicationMessage(applicationData);
+  const originalMessage = createApplicationMessage(applicationData);
 
-    // First, update with votes to create a voter list
-    const updatedWithVotes = updateVoteCount(
-      originalMessage.blocks,
-      2,
-      1,
-      ["U001", "U002"],
-      ["U003"]
-    );
+  const updatedWithVotes = updateVoteCount(
+    originalMessage.blocks,
+    2,
+    1,
+    ["U001", "U002"],
+    ["U003"],
+  );
 
-    const approvedBlocks = markAsApproved(
-      updatedWithVotes,
-      3,
-      1,
-      ["U001", "U002", "U004"], // Different voters passed, but should be ignored
-      ["U005"]
-    );
+  // Call markAsApproved with updated voter data
+  const approvedBlocks = markAsApproved(
+    updatedWithVotes,
+    3,
+    1,
+    ["U001", "U002", "U004"],
+    ["U005"],
+  );
 
-    const contextBlock = approvedBlocks.find(
-      (block) => block.type === "context"
-    );
-    assertExists(contextBlock, "Should have preserved the context block");
+  const contextBlock = approvedBlocks.find((block) => block.type === "context");
+  assertExists(contextBlock, "Should have a voter list");
 
-    const elements = contextBlock.elements;
-    assertEquals(
-      elements[0].text,
-      "✅ <@U001>, <@U002>",
-      "Should preserve original yes voters"
-    );
-    assertEquals(
-      elements[1].text,
-      "❌ <@U003>",
-      "Should preserve original no voters"
-    );
-  }
-);
+  // Should show the updated voter data
+  const elements = contextBlock.elements;
+  assertEquals(
+    elements[0].text,
+    "✅ <@U001>, <@U002>, <@U004>",
+    "Should show updated yes voters",
+  );
+  assertEquals(elements[1].text, "❌ <@U005>", "Should show updated no voters");
+});
 
 Deno.test("markAsApproved - adds approval message", () => {
   const applicationData: ApplicationData = {
@@ -551,14 +543,14 @@ Deno.test("markAsApproved - adds approval message", () => {
     3,
     0,
     ["U001", "U002", "U003"],
-    []
+    [],
   );
 
   const approvalBlock = approvedBlocks[approvedBlocks.length - 1];
   assertEquals(approvalBlock.type, "section");
   assertEquals(
     approvalBlock.text.text,
-    "✅ *Godkjent!* Søknaden har blitt godkjent av styret."
+    "✅ *Godkjent!* Søknaden har blitt godkjent av styret.",
   );
 });
 
@@ -578,7 +570,7 @@ Deno.test("markAsApproved - preserves original message structure", () => {
     5,
     0,
     ["U001", "U002", "U003", "U004", "U005"],
-    []
+    [],
   );
 
   // Check that header is preserved
@@ -616,7 +608,7 @@ Deno.test("markAsApproved - prevents message bloat on repeated calls", () => {
     2,
     1,
     ["U001", "U002"],
-    ["U003"]
+    ["U003"],
   );
 
   // First approval
@@ -625,7 +617,7 @@ Deno.test("markAsApproved - prevents message bloat on repeated calls", () => {
     2,
     1,
     ["U001", "U002"],
-    ["U003"]
+    ["U003"],
   );
   const firstApprovalLength = firstApproval.length;
 
@@ -635,7 +627,7 @@ Deno.test("markAsApproved - prevents message bloat on repeated calls", () => {
     2,
     1,
     ["U001", "U002"],
-    ["U003"]
+    ["U003"],
   );
   const secondApprovalLength = secondApproval.length;
 
@@ -645,31 +637,32 @@ Deno.test("markAsApproved - prevents message bloat on repeated calls", () => {
     2,
     1,
     ["U001", "U002"],
-    ["U003"]
+    ["U003"],
   );
   const thirdApprovalLength = thirdApproval.length;
 
-  // Message size should not grow on repeated calls
+  // Message size should stay consistent
+  assertEquals(firstApprovalLength, 8, "First approval should have 8 blocks");
   assertEquals(
-    firstApprovalLength,
     secondApprovalLength,
-    "Second approval should not grow the message"
+    8,
+    "Second approval should stay at 8 blocks",
   );
   assertEquals(
-    secondApprovalLength,
     thirdApprovalLength,
-    "Third approval should not grow the message"
+    8,
+    "Third approval should stay at 8 blocks",
   );
 
   // Verify only one approval message exists
   const approvalMessages = thirdApproval.filter(
     (block) =>
-      block.type === "section" && block.text?.text?.includes("*Godkjent!*")
+      block.type === "section" && block.text?.text?.includes("*Godkjent!*"),
   );
   assertEquals(
     approvalMessages.length,
     1,
-    "Should only have one approval message"
+    "Should only have one approval message",
   );
 });
 
@@ -709,7 +702,7 @@ Deno.test(
     assertEquals(
       brokenBlocks.length,
       11,
-      "Broken message should have 11 blocks"
+      "Broken message should have 11 blocks",
     );
 
     // When someone presses yes or no we should fix the message
@@ -718,7 +711,7 @@ Deno.test(
       3,
       1,
       ["U001", "U002", "U004"],
-      ["U003"]
+      ["U003"],
     );
 
     // Should be back to normal size: 6 base blocks + 1 voter list = 7 blocks
@@ -733,5 +726,51 @@ Deno.test(
     assertEquals(voterList.elements.length, 2);
     assertEquals(voterList.elements[0].text, "✅ <@U001>, <@U002>, <@U004>");
     assertEquals(voterList.elements[1].text, "❌ <@U003>");
-  }
+  },
 );
+
+Deno.test("markAsApproved - handles voting after approval", () => {
+  const applicationData: ApplicationData = {
+    what: "Test",
+    groupName: "Webkom",
+    amount: "100",
+    description: "Test",
+    applicantId: "U999",
+    applicationId: 5,
+  };
+
+  const originalMessage = createApplicationMessage(applicationData);
+
+  // Update with initial votes
+  const withVotes = updateVoteCount(
+    originalMessage.blocks,
+    2,
+    0,
+    ["U001", "U002"],
+    [],
+  );
+
+  // Approve the application
+  const approvedBlocks = markAsApproved(withVotes, 2, 0, ["U001", "U002"], []);
+
+  // Now someone votes NO after approval
+  const afterNewVote = markAsApproved(
+    approvedBlocks,
+    2,
+    1,
+    ["U001", "U002"],
+    ["U003"],
+  );
+
+  // The voter list should show the new NO vote
+  const contextBlock = afterNewVote.find((block) => block.type === "context");
+  assertExists(contextBlock, "Should have a voter list");
+
+  assertEquals(
+    contextBlock.elements.length,
+    2,
+    "Should have yes and no sections",
+  );
+  assertEquals(contextBlock.elements[0].text, "✅ <@U001>, <@U002>");
+  assertEquals(contextBlock.elements[1].text, "❌ <@U003>");
+});

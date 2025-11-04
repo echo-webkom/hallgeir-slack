@@ -39,7 +39,7 @@ export async function createVote(data: NewVote) {
 export async function updateVote(
   userId: string,
   applicationId: number,
-  isYes: boolean
+  isYes: boolean,
 ) {
   return await db
     .updateTable("vote")
@@ -52,7 +52,7 @@ export async function updateVote(
 
 export async function deleteVote(
   userId: string,
-  applicationId: number
+  applicationId: number,
 ): Promise<void> {
   await db
     .deleteFrom("vote")
@@ -90,7 +90,7 @@ export async function upsertVote(data: NewVote) {
     const updated = await updateVote(
       data.user_id,
       data.application_id,
-      data.is_yes
+      data.is_yes,
     );
     return updated!;
   } else {
