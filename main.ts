@@ -51,8 +51,8 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
   const what = values.what.what_input.value;
   const groupName = values.group_name.group_name_input.selected_option?.value;
   const amount = values.amount.amount_input.value;
-  const description = values.description.description_input.value ??
-    "Ingen beskrivelse";
+  const description =
+    values.description.description_input.value ?? "Ingen beskrivelse";
   const applicantId = body.user.id;
 
   if (!what || !groupName || !amount || !description) {
@@ -118,7 +118,7 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID,
+      BOARD_CHANNEL_ID
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
@@ -134,7 +134,7 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "yes", client);
-  },
+  }
 );
 
 app.action<BlockAction<ButtonAction>>(
@@ -145,7 +145,7 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID,
+      BOARD_CHANNEL_ID
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
@@ -161,14 +161,14 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "no", client);
-  },
+  }
 );
 
 async function handleVote(
   body: BlockAction<ButtonAction>,
   action: ButtonAction,
   vote: "yes" | "no",
-  client: App["client"],
+  client: App["client"]
 ) {
   const messageTs = body.message?.ts;
   const channelId = body.channel?.id;
@@ -193,7 +193,7 @@ async function handleVote(
     }
 
     console.log(
-      `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`,
+      `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`
     );
     await Vote.update(voterId, applicationId, vote === "yes");
 
@@ -204,8 +204,10 @@ async function handleVote(
     const originalMessage = body.message;
 
     // Check if application reaches 8+ yes votes
-    const shouldApprove = yes_count >= APPROVE_THRESHOLD &&
-      !application.approved_at;
+    const shouldApprove =
+      yes_count >= APPROVE_THRESHOLD &&
+      !application.approved_at &&
+      noVoters.length === 0;
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {
@@ -215,16 +217,14 @@ async function handleVote(
       console.log("Notifying applicant:", application.applicant_id);
       await client.chat.postMessage({
         channel: application.applicant_id,
-        text:
-          `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
+        text: `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
       });
 
       console.log("Notifying channel:", channelId);
       await client.chat.postMessage({
         channel: channelId,
         thread_ts: messageTs,
-        text:
-          `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
+        text: `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
       });
     }
 
@@ -235,7 +235,7 @@ async function handleVote(
         yes_count,
         no_count,
         yesVoters,
-        noVoters,
+        noVoters
       );
 
       console.log("Marking message as approved:", messageTs);
@@ -251,7 +251,7 @@ async function handleVote(
         yes_count,
         no_count,
         yesVoters,
-        noVoters,
+        noVoters
       );
 
       console.log("Updating vote counts in message:", messageTs);
