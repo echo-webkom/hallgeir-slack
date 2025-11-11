@@ -39,6 +39,19 @@ export const Vote = {
     return result;
   },
 
+  upsert: async (userId: string, applicationId: number, isYes: boolean) => {
+    const existingVote = await Vote.find(userId, applicationId);
+    if (existingVote) {
+      return await Vote.update(userId, applicationId, isYes);
+    } else {
+      return await Vote.create({
+        user_id: userId,
+        application_id: applicationId,
+        is_yes: isYes,
+      });
+    }
+  },
+
   update: async (userId: string, applicationId: number, isYes: boolean) => {
     const result = await db
       .updateTable("vote")

@@ -195,7 +195,7 @@ async function handleVote(
     console.log(
       `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`
     );
-    await Vote.update(voterId, applicationId, vote === "yes");
+    await Vote.upsert(voterId, applicationId, vote === "yes");
 
     const { yes_count, no_count } = await Vote.count(applicationId);
     const votes = await Vote.findManyByApplicationId(applicationId);
