@@ -13,8 +13,13 @@ import { migrateToLatest } from "./src/db.ts";
 import { Application } from "./src/repo/application.ts";
 import { Vote } from "./src/repo/vote.ts";
 import { loadConfig } from "./src/config.ts";
+import { setupLogger, logInfo, logError, logDebug } from "./src/logger.ts";
+import * as log from "@std/log";
 
 const APPROVE_THRESHOLD = 8;
+
+// Setup logger (use DEBUG for development, INFO for production)
+setupLogger((Deno.env.get("LOG_LEVEL") as log.LevelName) || "DEBUG");
 
 const {
   TOKEN,
@@ -24,8 +29,11 @@ const {
   ECHONOMI_CHANNEL_ID,
 } = loadConfig();
 
+logInfo("Starting database migration");
 await migrateToLatest();
+logInfo("Database migration completed");
 
+logInfo("Initializing Slack app", { socketMode: true });
 const app = new App({
   token: TOKEN,
   signingSecret: SIGNING_SECRET,
@@ -36,11 +44,16 @@ const app = new App({
 app.command("/soknad", async ({ command, ack, client }) => {
   await ack();
 
+  logDebug("User opened application modal", {
+    userId: command.user_id,
+    channelId: command.channel_id,
+  });
+
   try {
     const modal = createApplicationModal(command);
     await client.views.open(modal);
   } catch (error) {
-    console.error("Error opening modal:", error);
+    logError("Error opening modal", error, { userId: command.user_id });
   }
 });
 
@@ -55,12 +68,27 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
     values.description.description_input.value ?? "Ingen beskrivelse";
   const applicantId = body.user.id;
 
+  logDebug("Application modal submitted", {
+    applicantId,
+    hasWhat: !!what,
+    hasGroupName: !!groupName,
+    hasAmount: !!amount,
+  });
+
   if (!what || !groupName || !amount || !description) {
-    console.error("All fields are required");
+    logError("Application validation failed - missing required fields", undefined, {
+      applicantId,
+      missingFields: {
+        what: !what,
+        groupName: !groupName,
+        amount: !amount,
+        description: !description,
+      },
+    });
     return;
   }
 
-  console.log("Creating application:", {
+  logInfo("Creating application", {
     what,
     group_name: groupName,
     amount,
@@ -76,6 +104,14 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       applicant_id: applicantId,
     });
 
+    logInfo("Application created successfully", {
+      applicationId: application.id,
+      what,
+      groupName,
+      amount,
+      applicantId,
+    });
+
     const message = createApplicationMessage({
       what,
       groupName,
@@ -85,27 +121,32 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       applicationId: application.id,
     });
 
-    console.log("Posting application to channel:", ECHONOMI_CHANNEL_ID);
+    logInfo("Posting application to channel", {
+      channelId: ECHONOMI_CHANNEL_ID,
+      applicationId: application.id,
+    });
     await client.chat.postMessage({
       channel: ECHONOMI_CHANNEL_ID,
       ...message,
     });
 
-    console.log("Posting ephemeral message to user:", body.user.id);
+    logDebug("Notifying applicant of submission", {
+      userId: body.user.id,
+      applicationId: application.id,
+    });
     await client.chat.postEphemeral({
       channel: body.user.id,
       user: body.user.id,
       text: `Din søknad for "${what}" er sendt til styret for godkjenning! 🎉`,
     });
   } catch (error) {
-    console.error("Creating application failed:", {
+    logError("Failed to create or post application", error, {
       what,
       group_name: groupName,
       amount,
       description,
       applicant_id: applicantId,
     });
-    console.error("Error posting application:", error);
   }
 });
 
@@ -114,6 +155,11 @@ app.action<BlockAction<ButtonAction>>(
   "vote_yes",
   async ({ body, action, ack, client }) => {
     await ack();
+
+    logDebug("Vote yes button clicked", {
+      userId: body.user.id,
+      applicationId: action.value,
+    });
 
     const isBoardMember = await isUserInChannel(
       client,
@@ -124,7 +170,11 @@ app.action<BlockAction<ButtonAction>>(
       const channelId = body.channel?.id;
       if (!channelId) return;
 
-      console.log("User is not a board member:", body.user.id);
+      logInfo("Non-board member attempted to vote", {
+        userId: body.user.id,
+        vote: "yes",
+        applicationId: action.value,
+      });
       await client.chat.postEphemeral({
         channel: channelId,
         user: body.user.id,
@@ -142,6 +192,11 @@ app.action<BlockAction<ButtonAction>>(
   async ({ body, action, ack, client }) => {
     await ack();
 
+    logDebug("Vote no button clicked", {
+      userId: body.user.id,
+      applicationId: action.value,
+    });
+
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
@@ -151,7 +206,11 @@ app.action<BlockAction<ButtonAction>>(
       const channelId = body.channel?.id;
       if (!channelId) return;
 
-      console.log("User is not a board member:", body.user.id);
+      logInfo("Non-board member attempted to vote", {
+        userId: body.user.id,
+        vote: "no",
+        applicationId: action.value,
+      });
       await client.chat.postEphemeral({
         channel: channelId,
         user: body.user.id,
@@ -176,51 +235,84 @@ async function handleVote(
   const applicationId = parseInt(action.value || "0");
 
   if (!messageTs || !channelId) {
-    console.error("Missing message TS or channel ID");
+    logError("Missing message TS or channel ID", undefined, {
+      messageTs,
+      channelId,
+      voterId,
+    });
     return;
   }
 
   if (!applicationId) {
-    console.error("Invalid application ID:", action.value);
+    logError("Invalid application ID", undefined, {
+      rawValue: action.value,
+      voterId,
+    });
     return;
   }
 
   try {
     const application = await Application.findById(applicationId);
     if (!application) {
-      console.error("Application not found:", applicationId);
+      logError("Application not found", undefined, {
+        applicationId,
+        voterId,
+        vote,
+      });
       return;
     }
 
-    console.log(
-      `Recording vote for application ${applicationId} by user ${voterId}: ${vote}`
-    );
+    logInfo("Recording vote", {
+      applicationId,
+      voterId,
+      vote,
+      what: application.what,
+    });
     await Vote.upsert(voterId, applicationId, vote === "yes");
 
-    const { yes_count, no_count } = await Vote.count(applicationId);
     const votes = await Vote.findManyByApplicationId(applicationId);
     const yesVoters = votes.filter((v) => v.is_yes).map((v) => v.user_id);
     const noVoters = votes.filter((v) => !v.is_yes).map((v) => v.user_id);
     const originalMessage = body.message;
 
+    logDebug("Vote count updated", {
+      applicationId,
+      yesVotes: yesVoters.length,
+      noVotes: noVoters.length,
+      yesVoters,
+      noVoters,
+    });
+
     // Check if application reaches 8+ yes votes
     const shouldApprove =
-      yes_count >= APPROVE_THRESHOLD &&
+      yesVoters.length >= APPROVE_THRESHOLD &&
       !application.approved_at &&
       noVoters.length === 0;
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {
-      console.log("Approving application:", applicationId);
+      logInfo("Application approved", {
+        applicationId,
+        what: application.what,
+        yesVotes: yesVoters.length,
+        noVotes: noVoters.length,
+        applicantId: application.applicant_id,
+      });
       await Application.approve(applicationId);
 
-      console.log("Notifying applicant:", application.applicant_id);
+      logDebug("Notifying applicant of approval", {
+        applicantId: application.applicant_id,
+        applicationId,
+      });
       await client.chat.postMessage({
         channel: application.applicant_id,
         text: `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
       });
 
-      console.log("Notifying channel:", channelId);
+      logDebug("Notifying channel of approval", {
+        channelId,
+        applicationId,
+      });
       await client.chat.postMessage({
         channel: channelId,
         thread_ts: messageTs,
@@ -232,13 +324,17 @@ async function handleVote(
     if (isApproved) {
       const approvedBlocks = markAsApproved(
         originalMessage?.blocks,
-        yes_count,
-        no_count,
+        yesVoters.length,
+        noVoters.length,
         yesVoters,
         noVoters
       );
 
-      console.log("Marking message as approved:", messageTs);
+      logDebug("Marking message as approved", {
+        messageTs,
+        channelId,
+        applicationId,
+      });
       await client.chat.update({
         channel: channelId,
         ts: messageTs,
@@ -248,13 +344,19 @@ async function handleVote(
     } else {
       const updatedBlocks = updateVoteCount(
         originalMessage?.blocks,
-        yes_count,
-        no_count,
+        yesVoters.length,
+        noVoters.length,
         yesVoters,
         noVoters
       );
 
-      console.log("Updating vote counts in message:", messageTs);
+      logDebug("Updating vote counts in message", {
+        messageTs,
+        channelId,
+        applicationId,
+        yesVotes: yesVoters.length,
+        noVotes: noVoters.length,
+      });
       await client.chat.update({
         channel: channelId,
         ts: messageTs,
@@ -263,10 +365,16 @@ async function handleVote(
       });
     }
   } catch (error) {
-    console.error("Error handling vote:", error);
+    logError("Error handling vote", error, {
+      applicationId,
+      voterId,
+      vote,
+      messageTs,
+      channelId,
+    });
   }
 }
 
 await app.start();
 
-console.log(`⚡️ Slack bot is running in Socket Mode!`);
+logInfo("Slack bot started successfully", { mode: "socket" });
