@@ -76,15 +76,19 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
   });
 
   if (!what || !groupName || !amount || !description) {
-    logError("Application validation failed - missing required fields", undefined, {
-      applicantId,
-      missingFields: {
-        what: !what,
-        groupName: !groupName,
-        amount: !amount,
-        description: !description,
-      },
-    });
+    logError(
+      "Application validation failed - missing required fields",
+      undefined,
+      {
+        applicantId,
+        missingFields: {
+          what: !what,
+          groupName: !groupName,
+          amount: !amount,
+          description: !description,
+        },
+      }
+    );
     return;
   }
 
@@ -268,7 +272,7 @@ async function handleVote(
       vote,
       what: application.what,
     });
-    await Vote.upsert(voterId, applicationId, vote === "yes");
+    await Vote.upsertOrToggle(voterId, applicationId, vote === "yes");
 
     const votes = await Vote.findManyByApplicationId(applicationId);
     const yesVoters = votes.filter((v) => v.is_yes).map((v) => v.user_id);
@@ -283,11 +287,18 @@ async function handleVote(
       noVoters,
     });
 
-    // Check if application reaches 8+ yes votes
+    const isAboveThreshold = yesVoters.length >= APPROVE_THRESHOLD;
+    const hasNoVotes = noVoters.length === 0;
+    const isNotAlreadyApproved = !application.approved_at;
+
+    // A vote should approve the application if:
+    // - It has reached the approval threshold
+    // - It has no "no" votes
+    // - It is not already approved
     const shouldApprove =
-      yesVoters.length >= APPROVE_THRESHOLD &&
-      !application.approved_at &&
-      noVoters.length === 0;
+      isAboveThreshold && hasNoVotes && isNotAlreadyApproved;
+
+    // Determine if the application is now approved
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {

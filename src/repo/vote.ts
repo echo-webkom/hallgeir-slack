@@ -39,9 +39,17 @@ export const Vote = {
     return result;
   },
 
-  upsert: async (userId: string, applicationId: number, isYes: boolean) => {
+  // Upsert a vote: create if not exists, otherwise update
+  // If it is the same vote as before, remove it (toggle)
+  upsertOrToggle: async (
+    userId: string,
+    applicationId: number,
+    isYes: boolean
+  ) => {
     const existingVote = await Vote.find(userId, applicationId);
-    if (existingVote) {
+    if (existingVote && existingVote.is_yes === isYes) {
+      return await Vote.delete(userId, applicationId);
+    } else if (existingVote) {
       return await Vote.update(userId, applicationId, isYes);
     } else {
       return await Vote.create({
@@ -75,6 +83,17 @@ export const Vote = {
 
   findManyByApplicationId: async (applicationId: number) => {
     return await __findByApplicationId(applicationId);
+  },
+
+  delete: async (userId: string, applicationId: number) => {
+    const result = await db
+      .deleteFrom("vote")
+      .where("user_id", "=", userId)
+      .where("application_id", "=", applicationId)
+      .returningAll()
+      .executeTakeFirst();
+
+    return result;
   },
 };
 
