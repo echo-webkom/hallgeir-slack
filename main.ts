@@ -173,15 +173,15 @@ async function handleVote(
   const messageTs = body.message?.ts;
   const channelId = body.channel?.id;
   const voterId = body.user.id;
-  const applicationId = parseInt(action.value || "NaN");
+  const applicationId = parseInt(action.value || "0");
 
   if (!messageTs || !channelId) {
     console.error("Missing message TS or channel ID");
     return;
   }
 
-  if (!isNaN(applicationId)) {
-    console.error("Missing application ID");
+  if (!applicationId) {
+    console.error("Invalid application ID:", action.value);
     return;
   }
 
