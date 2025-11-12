@@ -13,13 +13,9 @@ import { migrateToLatest } from "./src/db.ts";
 import { Application } from "./src/repo/application.ts";
 import { Vote } from "./src/repo/vote.ts";
 import { loadConfig } from "./src/config.ts";
-import { setupLogger, logInfo, logError, logDebug } from "./src/logger.ts";
-import * as log from "@std/log";
+import { Logger } from "./src/logger.ts";
 
 const APPROVE_THRESHOLD = 8;
-
-// Setup logger (use DEBUG for development, INFO for production)
-setupLogger((Deno.env.get("LOG_LEVEL") as log.LevelName) || "DEBUG");
 
 const {
   TOKEN,
@@ -29,11 +25,11 @@ const {
   ECHONOMI_CHANNEL_ID,
 } = loadConfig();
 
-logInfo("Starting database migration");
+Logger.info("starting database migration");
 await migrateToLatest();
-logInfo("Database migration completed");
+Logger.info("database migration completed");
 
-logInfo("Initializing Slack app", { socketMode: true });
+Logger.info("initializing Slack app", { socketMode: true });
 const app = new App({
   token: TOKEN,
   signingSecret: SIGNING_SECRET,
@@ -44,7 +40,7 @@ const app = new App({
 app.command("/soknad", async ({ command, ack, client }) => {
   await ack();
 
-  logDebug("User opened application modal", {
+  Logger.debug("user opened application modal", {
     userId: command.user_id,
     channelId: command.channel_id,
   });
@@ -53,7 +49,7 @@ app.command("/soknad", async ({ command, ack, client }) => {
     const modal = createApplicationModal(command);
     await client.views.open(modal);
   } catch (error) {
-    logError("Error opening modal", error, { userId: command.user_id });
+    Logger.error("error opening modal", error, { userId: command.user_id });
   }
 });
 
@@ -64,11 +60,11 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
   const what = values.what.what_input.value;
   const groupName = values.group_name.group_name_input.selected_option?.value;
   const amount = values.amount.amount_input.value;
-  const description =
-    values.description.description_input.value ?? "Ingen beskrivelse";
+  const description = values.description.description_input.value ??
+    "Ingen beskrivelse";
   const applicantId = body.user.id;
 
-  logDebug("Application modal submitted", {
+  Logger.debug("application modal submitted", {
     applicantId,
     hasWhat: !!what,
     hasGroupName: !!groupName,
@@ -76,23 +72,19 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
   });
 
   if (!what || !groupName || !amount || !description) {
-    logError(
-      "Application validation failed - missing required fields",
-      undefined,
-      {
-        applicantId,
-        missingFields: {
-          what: !what,
-          groupName: !groupName,
-          amount: !amount,
-          description: !description,
-        },
-      }
-    );
+    Logger.error("invalid application submission", undefined, {
+      applicantId,
+      missingFields: {
+        what: !what,
+        groupName: !groupName,
+        amount: !amount,
+        description: !description,
+      },
+    });
     return;
   }
 
-  logInfo("Creating application", {
+  Logger.info("creating application", {
     what,
     group_name: groupName,
     amount,
@@ -108,7 +100,7 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       applicant_id: applicantId,
     });
 
-    logInfo("Application created successfully", {
+    Logger.info("application created successfully", {
       applicationId: application.id,
       what,
       groupName,
@@ -125,7 +117,7 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       applicationId: application.id,
     });
 
-    logInfo("Posting application to channel", {
+    Logger.info("posting application to channel", {
       channelId: ECHONOMI_CHANNEL_ID,
       applicationId: application.id,
     });
@@ -134,7 +126,7 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       ...message,
     });
 
-    logDebug("Notifying applicant of submission", {
+    Logger.debug("notifying applicant of submission", {
       userId: body.user.id,
       applicationId: application.id,
     });
@@ -144,7 +136,7 @@ app.view("application_modal", async ({ ack, body, view, client }) => {
       text: `Din søknad for "${what}" er sendt til styret for godkjenning! 🎉`,
     });
   } catch (error) {
-    logError("Failed to create or post application", error, {
+    Logger.error("error creating or posting application", error, {
       what,
       group_name: groupName,
       amount,
@@ -160,7 +152,7 @@ app.action<BlockAction<ButtonAction>>(
   async ({ body, action, ack, client }) => {
     await ack();
 
-    logDebug("Vote yes button clicked", {
+    Logger.debug("vote yes button clicked", {
       userId: body.user.id,
       applicationId: action.value,
     });
@@ -168,13 +160,13 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID
+      BOARD_CHANNEL_ID,
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
       if (!channelId) return;
 
-      logInfo("Non-board member attempted to vote", {
+      Logger.info("non-board member attempted to vote", {
         userId: body.user.id,
         vote: "yes",
         applicationId: action.value,
@@ -188,7 +180,7 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "yes", client);
-  }
+  },
 );
 
 app.action<BlockAction<ButtonAction>>(
@@ -196,7 +188,7 @@ app.action<BlockAction<ButtonAction>>(
   async ({ body, action, ack, client }) => {
     await ack();
 
-    logDebug("Vote no button clicked", {
+    Logger.debug("vote no button clicked", {
       userId: body.user.id,
       applicationId: action.value,
     });
@@ -204,13 +196,13 @@ app.action<BlockAction<ButtonAction>>(
     const isBoardMember = await isUserInChannel(
       client,
       body.user.id,
-      BOARD_CHANNEL_ID
+      BOARD_CHANNEL_ID,
     );
     if (!isBoardMember) {
       const channelId = body.channel?.id;
       if (!channelId) return;
 
-      logInfo("Non-board member attempted to vote", {
+      Logger.info("non-board member attempted to vote", {
         userId: body.user.id,
         vote: "no",
         applicationId: action.value,
@@ -224,14 +216,14 @@ app.action<BlockAction<ButtonAction>>(
     }
 
     await handleVote(body, action, "no", client);
-  }
+  },
 );
 
 async function handleVote(
   body: BlockAction<ButtonAction>,
   action: ButtonAction,
   vote: "yes" | "no",
-  client: App["client"]
+  client: App["client"],
 ) {
   const messageTs = body.message?.ts;
   const channelId = body.channel?.id;
@@ -239,7 +231,7 @@ async function handleVote(
   const applicationId = parseInt(action.value || "0");
 
   if (!messageTs || !channelId) {
-    logError("Missing message TS or channel ID", undefined, {
+    Logger.error("missing message TS or channel ID", undefined, {
       messageTs,
       channelId,
       voterId,
@@ -248,7 +240,7 @@ async function handleVote(
   }
 
   if (!applicationId) {
-    logError("Invalid application ID", undefined, {
+    Logger.error("invalid application ID", undefined, {
       rawValue: action.value,
       voterId,
     });
@@ -258,7 +250,7 @@ async function handleVote(
   try {
     const application = await Application.findById(applicationId);
     if (!application) {
-      logError("Application not found", undefined, {
+      Logger.error("application not found", undefined, {
         applicationId,
         voterId,
         vote,
@@ -266,7 +258,7 @@ async function handleVote(
       return;
     }
 
-    logInfo("Recording vote", {
+    Logger.info("recording vote", {
       applicationId,
       voterId,
       vote,
@@ -279,7 +271,7 @@ async function handleVote(
     const noVoters = votes.filter((v) => !v.is_yes).map((v) => v.user_id);
     const originalMessage = body.message;
 
-    logDebug("Vote count updated", {
+    Logger.debug("vote count updated", {
       applicationId,
       yesVotes: yesVoters.length,
       noVotes: noVoters.length,
@@ -295,14 +287,14 @@ async function handleVote(
     // - It has reached the approval threshold
     // - It has no "no" votes
     // - It is not already approved
-    const shouldApprove =
-      isAboveThreshold && hasNoVotes && isNotAlreadyApproved;
+    const shouldApprove = isAboveThreshold && hasNoVotes &&
+      isNotAlreadyApproved;
 
     // Determine if the application is now approved
     const isApproved = application.approved_at !== null || shouldApprove;
 
     if (shouldApprove) {
-      logInfo("Application approved", {
+      Logger.info("application approved", {
         applicationId,
         what: application.what,
         yesVotes: yesVoters.length,
@@ -311,23 +303,25 @@ async function handleVote(
       });
       await Application.approve(applicationId);
 
-      logDebug("Notifying applicant of approval", {
+      Logger.debug("notifying applicant of approval", {
         applicantId: application.applicant_id,
         applicationId,
       });
       await client.chat.postMessage({
         channel: application.applicant_id,
-        text: `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
+        text:
+          `🎉 Gratulerer! Din søknad for "${application.what}" er godkjent!`,
       });
 
-      logDebug("Notifying channel of approval", {
+      Logger.debug("notifying channel of approval", {
         channelId,
         applicationId,
       });
       await client.chat.postMessage({
         channel: channelId,
         thread_ts: messageTs,
-        text: `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
+        text:
+          `✅ Søknaden er godkjent! <@${application.applicant_id}> er varslet.`,
       });
     }
 
@@ -338,10 +332,10 @@ async function handleVote(
         yesVoters.length,
         noVoters.length,
         yesVoters,
-        noVoters
+        noVoters,
       );
 
-      logDebug("Marking message as approved", {
+      Logger.debug("marking message as approved", {
         messageTs,
         channelId,
         applicationId,
@@ -358,10 +352,10 @@ async function handleVote(
         yesVoters.length,
         noVoters.length,
         yesVoters,
-        noVoters
+        noVoters,
       );
 
-      logDebug("Updating vote counts in message", {
+      Logger.debug("updating vote counts in message", {
         messageTs,
         channelId,
         applicationId,
@@ -376,7 +370,7 @@ async function handleVote(
       });
     }
   } catch (error) {
-    logError("Error handling vote", error, {
+    Logger.error("Error handling vote", error, {
       applicationId,
       voterId,
       vote,
@@ -388,4 +382,4 @@ async function handleVote(
 
 await app.start();
 
-logInfo("Slack bot started successfully", { mode: "socket" });
+Logger.info("Slack bot started successfully", { mode: "socket" });

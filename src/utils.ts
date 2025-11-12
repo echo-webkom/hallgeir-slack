@@ -1,4 +1,5 @@
 import type { App } from "@slack/bolt";
+import { Logger } from "./logger.ts";
 
 export async function isUserInChannel(
   client: App["client"],
@@ -12,10 +13,10 @@ export async function isUserInChannel(
 
     return result.members?.includes(userId) ?? false;
   } catch (error) {
-    console.error(
-      `Error checking if user ${userId} is in channel ${channelId}:`,
-      error,
-    );
+    Logger.error("error checking if user is in channel", error, {
+      userId,
+      channelId,
+    });
     return false;
   }
 }

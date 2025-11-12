@@ -1,6 +1,7 @@
 import "@std/dotenv/load";
 import { migrateToLatest } from "../src/db.ts";
+import { Logger } from "../src/logger.ts";
 
-console.log("Running migrations...");
+Logger.info("Running migrations");
 await migrateToLatest();
-console.log("Migrations complete!");
+Logger.info("Migrations complete");

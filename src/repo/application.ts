@@ -29,17 +29,6 @@ export const Application = {
     return result;
   },
 
-  findByApplicantId: async (applicantId: string) => {
-    const results = await db
-      .selectFrom("application")
-      .selectAll()
-      .where("applicant_id", "=", applicantId)
-      .orderBy("created_at", "desc")
-      .execute();
-
-    return results;
-  },
-
   approve: async (id: number) => {
     const result = await db
       .updateTable("application")

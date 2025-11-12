@@ -9,6 +9,7 @@ import {
   PostgresDialect,
 } from "kysely";
 import { DB } from "./types.ts";
+import { Logger } from "./logger.ts";
 
 const { Pool } = pg;
 
@@ -34,15 +35,18 @@ export async function migrateToLatest() {
 
   results?.forEach((it) => {
     if (it.status === "Success") {
-      console.log(`migration "${it.migrationName}" was executed successfully`);
+      Logger.info("Migration executed successfully", {
+        migrationName: it.migrationName,
+      });
     } else if (it.status === "Error") {
-      console.error(`failed to execute migration "${it.migrationName}"`);
+      Logger.error("Failed to execute migration", undefined, {
+        migrationName: it.migrationName,
+      });
     }
   });
 
   if (error) {
-    console.error("failed to migrate");
-    console.error(error);
+    Logger.error("Failed to migrate", error);
     Deno.exit(1);
   }
 }

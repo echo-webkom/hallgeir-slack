@@ -1,3 +1,5 @@
+import { Logger } from "./logger.ts";
+
 export type Config = {
   TOKEN: string;
   SIGNING_SECRET: string;
@@ -14,31 +16,16 @@ export function loadConfig() {
   const ECHONOMI_CHANNEL_ID = Deno.env.get("ECHONOMI_CHANNEL_ID");
   const DATABASE_URL = Deno.env.get("DATABASE_URL");
 
-  console.log("Loading Hallgeir config...");
-  console.log(
-    `Using bot token: ${TOKEN ? "****" + TOKEN.slice(-4) : "not set"}`,
-  );
-  console.log(
-    `Using signing secret: ${
-      SIGNING_SECRET ? "****" + SIGNING_SECRET.slice(-4) : "not set"
-    }`,
-  );
-  console.log(
-    `Using app token: ${APP_TOKEN ? "****" + APP_TOKEN.slice(-4) : "not set"}`,
-  );
-  console.log(
-    "Using board channel ID: ",
-    BOARD_CHANNEL_ID ? BOARD_CHANNEL_ID : "not set",
-  );
-  console.log(
-    "Using echonomi channel ID: ",
-    ECHONOMI_CHANNEL_ID ? ECHONOMI_CHANNEL_ID : "not set",
-  );
-  console.log(
-    `Using database URL: ${
-      DATABASE_URL ? "****" + DATABASE_URL.slice(-4) : "not set"
-    }`,
-  );
+  Logger.info("Loading Hallgeir config", {
+    botToken: TOKEN ? "****" + TOKEN.slice(-4) : "not set",
+    signingSecret: SIGNING_SECRET
+      ? "****" + SIGNING_SECRET.slice(-4)
+      : "not set",
+    appToken: APP_TOKEN ? "****" + APP_TOKEN.slice(-4) : "not set",
+    boardChannelId: BOARD_CHANNEL_ID ? BOARD_CHANNEL_ID : "not set",
+    echonomiChannelId: ECHONOMI_CHANNEL_ID ? ECHONOMI_CHANNEL_ID : "not set",
+    databaseUrl: DATABASE_URL ? "****" + DATABASE_URL.slice(-4) : "not set",
+  });
 
   if (
     !TOKEN ||
@@ -48,8 +35,8 @@ export function loadConfig() {
     !ECHONOMI_CHANNEL_ID ||
     !DATABASE_URL
   ) {
-    console.error(
-      "Error: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID, ECHONOMI_CHANNEL_ID and DATABASE_URL must be set.",
+    Logger.error(
+      "Missing required environment variables: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, BOARD_CHANNEL_ID, ECHONOMI_CHANNEL_ID and DATABASE_URL must be set",
     );
     Deno.exit(1);
   }

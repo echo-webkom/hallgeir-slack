@@ -1,54 +1,54 @@
-import * as log from "@std/log";
+// https://docs.railway.com/guides/logs
 
-// Setup logging configuration with JSON formatting
-export function setupLogger(level: log.LevelName = "DEBUG") {
-  log.setup({
-    handlers: {
-      console: new log.ConsoleHandler(level, {
-        formatter: (logRecord) => {
-          const structured = {
-            timestamp: new Date().toISOString(),
-            level: logRecord.levelName,
-            message: logRecord.msg,
-            ...logRecord.args,
-          };
-          return JSON.stringify(structured);
-        },
-      }),
-    },
-    loggers: {
-      default: {
-        level,
-        handlers: ["console"],
-      },
-    },
-  });
-}
+type LogLevel = "debug" | "info" | "warn" | "error";
 
-// Export a default logger instance
-export const logger = log.getLogger();
+type LogEntry = {
+  message: string;
+  level: LogLevel;
+  timestamp?: string;
+  [key: string]: unknown;
+};
 
-// Helper functions for structured logging with context
-export function logInfo(message: string, context?: Record<string, unknown>) {
-  logger.info(message, context);
-}
+export class Logger {
+  private static log(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+  ) {
+    const entry: LogEntry = {
+      message,
+      level,
+      timestamp: new Date().toISOString(),
+      ...context,
+    };
 
-export function logError(
-  message: string,
-  error?: Error | unknown,
-  context?: Record<string, unknown>
-) {
-  const errorContext =
-    error instanceof Error
+    // Output as single-line JSON for Railway to parse correctly
+    console.log(JSON.stringify(entry));
+  }
+
+  static debug(message: string, context?: Record<string, unknown>) {
+    Logger.log("debug", message, context);
+  }
+
+  static info(message: string, context?: Record<string, unknown>) {
+    Logger.log("info", message, context);
+  }
+
+  static warn(message: string, context?: Record<string, unknown>) {
+    Logger.log("warn", message, context);
+  }
+
+  static error(
+    message: string,
+    error?: Error | unknown,
+    context?: Record<string, unknown>,
+  ) {
+    const errorContext = error instanceof Error
       ? { error: error.message, stack: error.stack, ...context }
-      : { error: String(error), ...context };
-  logger.error(message, errorContext);
-}
+      : error
+      ? { error: String(error), ...context }
+      : context;
 
-export function logWarn(message: string, context?: Record<string, unknown>) {
-  logger.warn(message, context);
-}
-
-export function logDebug(message: string, context?: Record<string, unknown>) {
-  logger.debug(message, context);
+    Logger.log("error", message, errorContext);
+  }
 }

@@ -7,17 +7,6 @@ export type NewVote = {
 };
 
 export const Vote = {
-  exists: async (userId: string, applicationId: number) => {
-    const result = await db
-      .selectFrom("vote")
-      .select("id")
-      .where("user_id", "=", userId)
-      .where("application_id", "=", applicationId)
-      .executeTakeFirst();
-
-    return result !== undefined;
-  },
-
   find: async (userId: string, applicationId: number) => {
     const result = await db
       .selectFrom("vote")
@@ -44,7 +33,7 @@ export const Vote = {
   upsertOrToggle: async (
     userId: string,
     applicationId: number,
-    isYes: boolean
+    isYes: boolean,
   ) => {
     const existingVote = await Vote.find(userId, applicationId);
     if (existingVote && existingVote.is_yes === isYes) {
@@ -72,17 +61,14 @@ export const Vote = {
     return result;
   },
 
-  count: async (applicationId: number) => {
-    const votes = await __findByApplicationId(applicationId);
-
-    const yes_count = votes.filter((v) => v.is_yes).length;
-    const no_count = votes.filter((v) => !v.is_yes).length;
-
-    return { yes_count, no_count };
-  },
-
   findManyByApplicationId: async (applicationId: number) => {
-    return await __findByApplicationId(applicationId);
+    const results = await db
+      .selectFrom("vote")
+      .selectAll()
+      .where("application_id", "=", applicationId)
+      .execute();
+
+    return results;
   },
 
   delete: async (userId: string, applicationId: number) => {
@@ -95,14 +81,4 @@ export const Vote = {
 
     return result;
   },
-};
-
-const __findByApplicationId = async (applicationId: number) => {
-  const results = await db
-    .selectFrom("vote")
-    .selectAll()
-    .where("application_id", "=", applicationId)
-    .execute();
-
-  return results;
 };
