@@ -1,7 +1,0 @@
-{
-  "providers": {
-    "deno": {
-      "version": "2.5.6"
-    }
-  }
-}
